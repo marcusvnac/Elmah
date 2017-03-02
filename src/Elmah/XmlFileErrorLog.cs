@@ -172,6 +172,7 @@ namespace Elmah
         /// <summary>
         /// Deletes Old files according the <code>size</code> parameter
         /// </summary>
+        /// <exception cref="XmlFileErrorLogDeleteException">Thrown when unable to delete files for various reasons.</exception>
         private void DeleteOldFiles()
         {
             if (_fileListSize == 0)
@@ -196,17 +197,17 @@ namespace Elmah
                     }
                 }
             }
-            catch (IOException)
+            catch (IOException ex)
             {
-                throw new Exception(string.Format("{0} The target file is open or memory-mapped or there is an open handle on the file", ErrorLogMessage));
+                throw new XmlFileErrorLogDeleteException(string.Format("{0} The target file is open or memory-mapped or there is an open handle on the file", ErrorLogMessage), ex);
             }
             catch (Exception ex) when (ex is SecurityException || ex is UnauthorizedAccessException)
             {
-                throw new Exception(string.Format("{0} Elmah does not have permission to delete old files.", ErrorLogMessage));
+                throw new XmlFileErrorLogDeleteException(string.Format("{0} Elmah does not have permission to delete old files.", ErrorLogMessage), ex);
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("{0} {1}", ErrorLogMessage, ex.Message));
+                throw new XmlFileErrorLogDeleteException(string.Format("{0} {1}", ErrorLogMessage, ex.Message), ex);
             }
         }
 
