@@ -176,13 +176,20 @@ namespace Elmah
         }
 
         /// <summary>
-        /// Check if the exception is of type XmlFileErrorLogDeleteException.
+        /// Check if the exception or its InnerException is of type XmlFileErrorLogDeleteException.
+        /// InnerException is checked in in case the XmlFileErrorLogDeleteException is caught and wrapped
+        /// by some other code up the call stack.
         /// </summary>
         /// <param name="ex">Exception to test</param>
-        /// <returns>True if the exception type XmlFileErrorLogDeleteException, otherwise false.</returns>
+        /// <returns>True if the exception or its InnerExcpetion if of type 
+        /// XmlFileErrorLogDeleteException, otherwise false.</returns>
         private bool IsXmlFileErrorLogDeleteException(Exception ex)
         {
-            return ex.GetType() == typeof(XmlFileErrorLogDeleteException);
+            if (ex == null) return false;
+
+            if (ex.GetType() == typeof(XmlFileErrorLogDeleteException)) return true;
+
+            return IsXmlFileErrorLogDeleteException(ex.InnerException);
         }
 
         /// <summary>
