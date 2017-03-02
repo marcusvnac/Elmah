@@ -134,8 +134,8 @@ namespace Elmah
         /// </summary>
         /// <remarks>
         /// Logs an error as a single XML file stored in a folder. XML files are named with a
-        /// sortable date and a unique identifier. Currently the XML files are stored indefinately.
-        /// As they are stored as files, they may be managed using standard scheduled jobs.
+        /// sortable date and a unique identifier. If the size attribute is set in the configuration
+        /// then this will remove older log files as new files are created.
         /// </remarks>
 
         public override string Log(Error error)
@@ -165,14 +165,30 @@ namespace Elmah
                 writer.Flush();
             }
 
-            DeleteOldFiles();
+            // Do not try to delete files if the current exception was caused by a previous
+            // attempt to delete old files.
+            if (!IsXmlFileErrorLogDeleteException(error.Exception))
+            {
+                DeleteOldFiles();
+            }
+
             return errorId;
+        }
+
+        /// <summary>
+        /// Check if the exception is of type XmlFileErrorLogDeleteException.
+        /// </summary>
+        /// <param name="ex">Exception to test</param>
+        /// <returns>True if the exception type XmlFileErrorLogDeleteException, otherwise false.</returns>
+        private bool IsXmlFileErrorLogDeleteException(Exception ex)
+        {
+            return ex.GetType() == typeof(XmlFileErrorLogDeleteException);
         }
 
         /// <summary>
         /// Deletes Old files according the <code>size</code> parameter
         /// </summary>
-        /// <exception cref="XmlFileErrorLogDeleteException">Thrown when unable to delete files for various reasons.</exception>
+        /// <exception cref="Elmah.XmlFileErrorLogDeleteException">Thrown when unable to delete files for various reasons.</exception>
         private void DeleteOldFiles()
         {
             if (_fileListSize == 0)
