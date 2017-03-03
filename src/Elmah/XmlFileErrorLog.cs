@@ -195,7 +195,7 @@ namespace Elmah
         /// <summary>
         /// Deletes Old files according the <code>size</code> parameter
         /// </summary>
-        /// <exception cref="Elmah.XmlFileErrorLogDeleteException">Thrown when unable to delete files for various reasons.</exception>
+        /// <remarks>Exceptions are recorded directly to the XmlFileErrorLog.</remarks>
         private void DeleteOldFiles()
         {
             if (_fileListSize == 0)
@@ -220,26 +220,21 @@ namespace Elmah
                     }
                 }
             }
-            catch (IOException ex)
-            {
-                var error = new Error(
-                    new XmlFileErrorLogDeleteException(string.Format("{0} The target file is open or memory-mapped or there is an open handle on the file", ErrorLogMessage), ex)
-                    , new System.Web.HttpContextWrapper(System.Web.HttpContext.Current));
-                Log(error);
-            }
-            catch (Exception ex) when (ex is SecurityException || ex is UnauthorizedAccessException)
-            {
-                var error = new Error(
-                    new XmlFileErrorLogDeleteException(string.Format("{0} Elmah does not have permission to delete old files.", ErrorLogMessage), ex)
-                    , new System.Web.HttpContextWrapper(System.Web.HttpContext.Current));
-                Log(error);
-            }
             catch (Exception ex)
             {
-                var error = new Error(
-                    new XmlFileErrorLogDeleteException(string.Format("{0} {1}", ErrorLogMessage, ex.Message), ex)
-                    , new System.Web.HttpContextWrapper(System.Web.HttpContext.Current));
-                Log(error);
+                var messageFormat = "{0} {1}";
+                if (ex.GetType() == typeof(IOException))
+                {
+                    messageFormat = "{0} The target file is open or memory-mapped or there is an open handle on the file.";
+                }
+                else if (ex.GetType() == typeof(SecurityException) || ex.GetType() == typeof(UnauthorizedAccessException))
+                {
+                    messageFormat = "{0} Elmah does not have permission to delete old files.";
+                }
+
+                Log(new Error(
+                        new XmlFileErrorLogDeleteException(string.Format(messageFormat, ErrorLogMessage, ex.Message), ex),
+                        new System.Web.HttpContextWrapper(System.Web.HttpContext.Current)));
             }
         }
 
