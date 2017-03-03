@@ -222,15 +222,24 @@ namespace Elmah
             }
             catch (IOException ex)
             {
-                throw new XmlFileErrorLogDeleteException(string.Format("{0} The target file is open or memory-mapped or there is an open handle on the file", ErrorLogMessage), ex);
+                var error = new Error(
+                    new XmlFileErrorLogDeleteException(string.Format("{0} The target file is open or memory-mapped or there is an open handle on the file", ErrorLogMessage), ex)
+                    , new System.Web.HttpContextWrapper(System.Web.HttpContext.Current));
+                Log(error);
             }
             catch (Exception ex) when (ex is SecurityException || ex is UnauthorizedAccessException)
             {
-                throw new XmlFileErrorLogDeleteException(string.Format("{0} Elmah does not have permission to delete old files.", ErrorLogMessage), ex);
+                var error = new Error(
+                    new XmlFileErrorLogDeleteException(string.Format("{0} Elmah does not have permission to delete old files.", ErrorLogMessage), ex)
+                    , new System.Web.HttpContextWrapper(System.Web.HttpContext.Current));
+                Log(error);
             }
             catch (Exception ex)
             {
-                throw new XmlFileErrorLogDeleteException(string.Format("{0} {1}", ErrorLogMessage, ex.Message), ex);
+                var error = new Error(
+                    new XmlFileErrorLogDeleteException(string.Format("{0} {1}", ErrorLogMessage, ex.Message), ex)
+                    , new System.Web.HttpContextWrapper(System.Web.HttpContext.Current));
+                Log(error);
             }
         }
 
