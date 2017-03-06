@@ -134,8 +134,8 @@ namespace Elmah
         /// </summary>
         /// <remarks>
         /// Logs an error as a single XML file stored in a folder. XML files are named with a
-        /// sortable date and a unique identifier. Currently the XML files are stored indefinately.
-        /// As they are stored as files, they may be managed using standard scheduled jobs.
+        /// sortable date and a unique identifier. If the size attribute is set in the configuration
+        /// then this will remove older log files as new files are created.
         /// </remarks>
 
         public override string Log(Error error)
@@ -165,13 +165,37 @@ namespace Elmah
                 writer.Flush();
             }
 
-            DeleteOldFiles();
+            // Do not try to delete files if the current exception was caused by a previous
+            // attempt to delete old files.
+            if (!IsXmlFileErrorLogDeleteException(error.Exception))
+            {
+                DeleteOldFiles();
+            }
+
             return errorId;
+        }
+
+        /// <summary>
+        /// Check if the exception or its InnerException is of type XmlFileErrorLogDeleteException.
+        /// InnerException is checked in in case the XmlFileErrorLogDeleteException is caught and wrapped
+        /// by some other code up the call stack.
+        /// </summary>
+        /// <param name="ex">Exception to test</param>
+        /// <returns>True if the exception or its InnerExcpetion if of type 
+        /// XmlFileErrorLogDeleteException, otherwise false.</returns>
+        private bool IsXmlFileErrorLogDeleteException(Exception ex)
+        {
+            if (ex == null) return false;
+
+            if (ex.GetType() == typeof(XmlFileErrorLogDeleteException)) return true;
+
+            return IsXmlFileErrorLogDeleteException(ex.InnerException);
         }
 
         /// <summary>
         /// Deletes Old files according the <code>size</code> parameter
         /// </summary>
+        /// <remarks>Exceptions are recorded directly to the XmlFileErrorLog.</remarks>
         private void DeleteOldFiles()
         {
             if (_fileListSize == 0)
@@ -196,17 +220,21 @@ namespace Elmah
                     }
                 }
             }
-            catch (IOException)
-            {
-                throw new Exception(string.Format("{0} The target file is open or memory-mapped or there is an open handle on the file", ErrorLogMessage));
-            }
-            catch (Exception ex) when (ex is SecurityException || ex is UnauthorizedAccessException)
-            {
-                throw new Exception(string.Format("{0} Elmah does not have permission to delete old files.", ErrorLogMessage));
-            }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("{0} {1}", ErrorLogMessage, ex.Message));
+                var messageFormat = "{0} {1}";
+                if (ex.GetType() == typeof(IOException))
+                {
+                    messageFormat = "{0} The target file is open or memory-mapped or there is an open handle on the file.";
+                }
+                else if (ex.GetType() == typeof(SecurityException) || ex.GetType() == typeof(UnauthorizedAccessException))
+                {
+                    messageFormat = "{0} Elmah does not have permission to delete old files.";
+                }
+
+                Log(new Error(
+                        new XmlFileErrorLogDeleteException(string.Format(messageFormat, ErrorLogMessage, ex.Message), ex),
+                        new System.Web.HttpContextWrapper(System.Web.HttpContext.Current)));
             }
         }
 
